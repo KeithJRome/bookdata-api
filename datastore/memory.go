@@ -42,7 +42,6 @@ func (b *Books) Initialize() {
 
 	// allocate
 	all := make([]*loader.BookData, len(lines))
-	b.Store = &all
 
 	// convert data into struct
 	for i, line := range lines {
@@ -67,6 +66,9 @@ func (b *Books) Initialize() {
 		}
 		all[i] = &book
 	}
+
+	// assign
+	b.Store = &all
 
 	// record how long it took
 	elapsed := time.Since(start)
