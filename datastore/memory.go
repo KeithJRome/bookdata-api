@@ -2,6 +2,7 @@ package datastore
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -30,14 +31,14 @@ func (b *Books) Initialize() {
 	// open the file
 	file, err := os.Open("./assets/books.csv")
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("couldn't open the file - %w", err))
 	}
 	defer file.Close()
 
 	// read the CSV data
 	lines, err := csv.NewReader(file).ReadAll()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("couldn't parse the CSV data - %w", err))
 	}
 
 	// allocate
@@ -54,14 +55,14 @@ func (b *Books) Initialize() {
 		}
 		book.ISBN = line[4]
 		book.ISBN13 = line[5]
-		book.LanguageCode = line[5]
-		if pages, err := strconv.Atoi(line[6]); err == nil {
+		book.LanguageCode = line[6]
+		if pages, err := strconv.Atoi(line[7]); err == nil {
 			book.NumPages = pages
 		}
-		if ratings, err := strconv.Atoi(line[7]); err == nil {
+		if ratings, err := strconv.Atoi(line[8]); err == nil {
 			book.Ratings = ratings
 		}
-		if reviews, err := strconv.Atoi(line[8]); err == nil {
+		if reviews, err := strconv.Atoi(line[9]); err == nil {
 			book.Reviews = reviews
 		}
 		all[i] = &book
