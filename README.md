@@ -125,3 +125,7 @@ func main() {
     
 }
 ```
+
+## Dockerfile
+
+I ended up using the golang image to build the container but scratch to run it. The total size was 8.6 MB.
