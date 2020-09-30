@@ -26,5 +26,10 @@ func main() {
 		fmt.Fprintln(w, "api v1")
 	})
 	api.HandleFunc("/books", getAllBooks).Methods(http.MethodGet)
+	api.HandleFunc("/books/authors/{author}", searchBooksByAuthor).Methods(http.MethodGet)
+	api.HandleFunc("/books/title/{title}", searchBooksByTitle).Methods(http.MethodGet)
+	api.HandleFunc("/books/isbn/{isbn}", getBookByIsbn).Methods(http.MethodGet)
+	api.HandleFunc("/book", createBook).Methods(http.MethodPost)
+	api.HandleFunc("/book/isbn/{isbn}", deleteBook).Methods(http.MethodDelete)
 	log.Fatalln(http.ListenAndServe(":8080", r))
 }

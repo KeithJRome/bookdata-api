@@ -6,6 +6,8 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/matt-FFFFFF/bookdata-api/loader"
@@ -15,6 +17,7 @@ import (
 // It contains a single field 'Store', which is (a pointer to) a slice of loader.BookData struct pointers
 type Books struct {
 	Store *[]*loader.BookData `json:"store"`
+	mux   sync.RWMutex
 }
 
 // Initialize is the method used to populate the in-memory datastore.
@@ -77,16 +80,177 @@ func (b *Books) Initialize() {
 
 }
 
-// GetAllBooks returns the entire dataset, subjet to the rudimentary limit & skip parameters
-func (b *Books) GetAllBooks(limit, skip int) *[]*loader.BookData {
-	if skip > len(*b.Store) {
+func applyLimitAndSkipToBooks(list *[]*loader.BookData, limit, skip int) *[]*loader.BookData {
+	if skip > len(*list) {
 		empty := make([]*loader.BookData, 0)
 		return &empty
 	}
-	max := len(*b.Store) - skip
+	max := len(*list) - skip
 	if limit == 0 || limit > max {
 		limit = max
 	}
-	ret := (*b.Store)[skip : skip+limit]
-	return &ret
+	filter := (*list)[skip : skip+limit]
+	return &filter
+}
+
+func (b *Books) filter(consider func(book *loader.BookData) (include bool)) *[]*loader.BookData {
+	filtered := make([]*loader.BookData, 0)
+	for _, book := range *b.Store {
+		if consider(book) {
+			filtered = append(filtered, book)
+		}
+	}
+	return &filtered
+}
+
+// GetAllBooks returns the entire dataset, subjet to the rudimentary limit & skip parameters
+func (b *Books) GetAllBooks(limit, skip int) *[]*loader.BookData {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
+
+	// limit and skip on everything
+	list := applyLimitAndSkipToBooks(b.Store, limit, skip)
+
+	return list
+}
+
+func (b *Books) SearchByAuthor(fragment string, limit, skip int) *[]*loader.BookData {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
+
+	// filter to the appropriate set
+	fragment = strings.ToLower(fragment)
+	filtered := b.filter(func(book *loader.BookData) bool {
+		authors := strings.ToLower(book.Authors)
+		return strings.Contains(authors, fragment)
+	})
+
+	// limit and skip
+	list := applyLimitAndSkipToBooks(filtered, limit, skip)
+
+	return list
+}
+
+func (b *Books) SearchByTitle(fragment string, limit, skip int) *[]*loader.BookData {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
+
+	// filter to the appropriate set
+	fragment = strings.ToLower(fragment)
+	filtered := b.filter(func(book *loader.BookData) bool {
+		title := strings.ToLower(book.Title)
+		return strings.Contains(title, fragment)
+	})
+
+	// limit and skip
+	list := applyLimitAndSkipToBooks(filtered, limit, skip)
+
+	return list
+}
+
+func (b *Books) GetByISBN(isbn string) *loader.BookData {
+	b.mux.RLock()
+	defer b.mux.RUnlock()
+
+	// look for isbn match
+	for _, book := range *b.Store {
+		if book.ISBN == isbn {
+			return book
+		}
+	}
+
+	return nil
+}
+
+type InsertBookConflictError struct {
+	Msg string
+}
+
+func (e *InsertBookConflictError) Error() string {
+	return e.Msg
+}
+
+func (b *Books) InsertBook(book *loader.BookData) error {
+
+	// start with a read lock
+	isWriting := false
+	b.mux.RLock()
+
+	// unlock the mux on exit
+	defer func() {
+		if isWriting {
+			b.mux.Unlock()
+		} else {
+			b.mux.RUnlock()
+		}
+	}()
+
+	// check for any conflicts
+	for _, existing := range *b.Store {
+		if book.ISBN == existing.ISBN {
+			return &InsertBookConflictError{fmt.Sprintf("InsertBook() ISBN conflict on %v", book.ISBN)}
+		}
+		if book.ISBN13 == existing.ISBN13 {
+			return &InsertBookConflictError{fmt.Sprintf("InsertBook() ISBN13 conflict on %v", book.ISBN13)}
+		}
+	}
+
+	// switch to a write lock
+	isWriting = true
+	b.mux.RUnlock()
+	b.mux.Lock()
+
+	// add to the slice
+	*b.Store = append(*b.Store, book)
+
+	return nil
+}
+
+type DeleteBookNotFoundError struct {
+	Msg string
+}
+
+func (e *DeleteBookNotFoundError) Error() string {
+	return e.Msg
+}
+
+func (b *Books) DeleteBook(isbn string) (book *loader.BookData, err error) {
+
+	// start with a read lock
+	isWriting := false
+	b.mux.RLock()
+
+	// unlock the mux on exit
+	defer func() {
+		if isWriting {
+			b.mux.Unlock()
+		} else {
+			b.mux.RUnlock()
+		}
+	}()
+
+	// find the book
+	for i, existing := range *b.Store {
+		if isbn == existing.ISBN {
+
+			// switch to a write lock
+			isWriting = true
+			b.mux.RUnlock()
+			b.mux.Lock()
+
+			// delete the entry
+			// NOTE: if there was a lot of data consider (a) linked list, (b) order being preserved, or (c) mark as deleted
+			*b.Store = append((*b.Store)[:i], (*b.Store)[i+1:]...)
+
+			// NOTE: I just wanted to show labeled outputs
+			book = existing
+			return
+
+		}
+	}
+
+	// raise not found
+	err = &DeleteBookNotFoundError{fmt.Sprintf("DeleteBook() ISBN %v not found", isbn)}
+	return
+
 }

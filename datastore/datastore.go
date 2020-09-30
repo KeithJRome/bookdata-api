@@ -8,4 +8,9 @@ import "github.com/matt-FFFFFF/bookdata-api/loader"
 type BookStore interface {
 	Initialize()
 	GetAllBooks(limit, skip int) *[]*loader.BookData
+	SearchByAuthor(fragment string, limit, skip int) *[]*loader.BookData
+	SearchByTitle(fragment string, limit, skip int) *[]*loader.BookData
+	GetByISBN(isbn string) *loader.BookData
+	InsertBook(book *loader.BookData) error
+	DeleteBook(isbn string) (*loader.BookData, error)
 }
