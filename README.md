@@ -4,6 +4,8 @@
 
 There is a race condition on CREATE and DELETE unless you use a RWMutex to handle locking.
 
+I added a race_test.go to demonstrate the problem (though it will pass now because I fixed it). You can check for race conditions during test or runtime by adding the -race flag.
+
 ## Deleting
 
 I chose to do a "re-slice" to preserve order...
