@@ -85,8 +85,11 @@ func applyLimitAndSkipToBooks(list *[]*loader.BookData, limit, skip int) *[]*loa
 		empty := make([]*loader.BookData, 0)
 		return &empty
 	}
+	if skip < 0 {
+		skip = 0
+	}
 	max := len(*list) - skip
-	if limit == 0 || limit > max {
+	if limit < 1 || limit > max {
 		limit = max
 	}
 	filter := (*list)[skip : skip+limit]

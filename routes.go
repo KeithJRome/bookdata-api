@@ -12,32 +12,40 @@ import (
 	"github.com/matt-FFFFFF/bookdata-api/loader"
 )
 
-func getLimitParam(r *http.Request) (int, error) {
-	limit := 0
+func getLimitParam(r *http.Request) (limit int, err error) {
 	queryParams := r.URL.Query()
 	l := queryParams.Get("limit")
 	if l != "" {
-		val, err := strconv.Atoi(l)
+		var val int
+		val, err = strconv.Atoi(l)
 		if err != nil {
-			return limit, err
+			return
+		}
+		if val < 0 {
+			err = errors.New(("limit is less than 0"))
+			return
 		}
 		limit = val
 	}
-	return limit, nil
+	return
 }
 
-func getSkipParam(r *http.Request) (int, error) {
-	skip := 0
+func getSkipParam(r *http.Request) (skip int, err error) {
 	queryParams := r.URL.Query()
 	l := queryParams.Get("skip")
 	if l != "" {
-		val, err := strconv.Atoi(l)
+		var val int
+		val, err = strconv.Atoi(l)
 		if err != nil {
-			return skip, err
+			return
+		}
+		if val < 0 {
+			err = errors.New("skip is less than 0")
+			return
 		}
 		skip = val
 	}
-	return skip, nil
+	return
 }
 
 func returnBooks(w http.ResponseWriter, r *http.Request, getter func(limit, skip int) *[]*loader.BookData) {
