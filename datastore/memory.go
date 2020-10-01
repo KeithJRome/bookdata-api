@@ -17,7 +17,7 @@ import (
 // It contains a single field 'Store', which is (a pointer to) a slice of loader.BookData struct pointers
 type Books struct {
 	Store *[]*loader.BookData `json:"store"`
-	mux   sync.RWMutex
+	mutex sync.RWMutex
 }
 
 // Initialize is the method used to populate the in-memory datastore.
@@ -105,8 +105,8 @@ func (b *Books) filter(consider func(book *loader.BookData) (include bool)) *[]*
 
 // GetAllBooks returns the entire dataset, subjet to the rudimentary limit & skip parameters
 func (b *Books) GetAllBooks(limit, skip int) *[]*loader.BookData {
-	b.mux.RLock()
-	defer b.mux.RUnlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	// limit and skip on everything
 	list := applyLimitAndSkipToBooks(b.Store, limit, skip)
@@ -115,8 +115,8 @@ func (b *Books) GetAllBooks(limit, skip int) *[]*loader.BookData {
 }
 
 func (b *Books) SearchByAuthor(fragment string, limit, skip int) *[]*loader.BookData {
-	b.mux.RLock()
-	defer b.mux.RUnlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	// filter to the appropriate set
 	fragment = strings.ToLower(fragment)
@@ -132,8 +132,8 @@ func (b *Books) SearchByAuthor(fragment string, limit, skip int) *[]*loader.Book
 }
 
 func (b *Books) SearchByTitle(fragment string, limit, skip int) *[]*loader.BookData {
-	b.mux.RLock()
-	defer b.mux.RUnlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	// filter to the appropriate set
 	fragment = strings.ToLower(fragment)
@@ -149,8 +149,8 @@ func (b *Books) SearchByTitle(fragment string, limit, skip int) *[]*loader.BookD
 }
 
 func (b *Books) GetByISBN(isbn string) *loader.BookData {
-	b.mux.RLock()
-	defer b.mux.RUnlock()
+	b.mutex.RLock()
+	defer b.mutex.RUnlock()
 
 	// look for isbn match
 	for _, book := range *b.Store {
@@ -172,16 +172,20 @@ func (e *InsertBookConflictError) Error() string {
 
 func (b *Books) InsertBook(book *loader.BookData) error {
 
+	// NOTE: I am comfortable with a separate READ and WRITE lock pattern because in a worst case, a conflict is found,
+	//  that maybe could have been resolved (for instance, the original being deleted). That doesn't create a consistency
+	//  problem.
+
 	// start with a read lock
 	isWriting := false
-	b.mux.RLock()
+	b.mutex.RLock()
 
 	// unlock the mux on exit
 	defer func() {
 		if isWriting {
-			b.mux.Unlock()
+			b.mutex.Unlock()
 		} else {
-			b.mux.RUnlock()
+			b.mutex.RUnlock()
 		}
 	}()
 
@@ -196,9 +200,9 @@ func (b *Books) InsertBook(book *loader.BookData) error {
 	}
 
 	// switch to a write lock
+	b.mutex.RUnlock()
 	isWriting = true
-	b.mux.RUnlock()
-	b.mux.Lock()
+	b.mutex.Lock()
 
 	// add to the slice
 	*b.Store = append(*b.Store, book)
@@ -216,27 +220,19 @@ func (e *DeleteBookNotFoundError) Error() string {
 
 func (b *Books) DeleteBook(isbn string) (book *loader.BookData, err error) {
 
-	// start with a read lock
-	isWriting := false
-	b.mux.RLock()
+	// NOTE: Originally I had a READ and WRITE separate lock process, like CreateBook(), however, there could be a
+	//  race condition whereby the index for delete was determined but then before the WRITE lock could be taken by
+	//  DeleteBook(), a WRITE lock could be taken by CreateBook() and the slice modified. This doesn't actually create
+	//  a problem for the code as CreateBook() is always adding to the end of the slice, but this could create a
+	//  problem if other methods that modify the slice were added in the future.
 
-	// unlock the mux on exit
-	defer func() {
-		if isWriting {
-			b.mux.Unlock()
-		} else {
-			b.mux.RUnlock()
-		}
-	}()
+	// put the whole operation in a write lock
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
 	// find the book
 	for i, existing := range *b.Store {
 		if isbn == existing.ISBN {
-
-			// switch to a write lock
-			isWriting = true
-			b.mux.RUnlock()
-			b.mux.Lock()
 
 			// delete the entry
 			// NOTE: if there was a lot of data consider (a) linked list, (b) order being preserved, or (c) mark as deleted
