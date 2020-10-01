@@ -172,22 +172,13 @@ func (e *InsertBookConflictError) Error() string {
 
 func (b *Books) InsertBook(book *loader.BookData) error {
 
-	// NOTE: I am comfortable with a separate READ and WRITE lock pattern because in a worst case, a conflict is found,
-	//  that maybe could have been resolved (for instance, the original being deleted). That doesn't create a consistency
-	//  problem.
+	// NOTE: Originally I had started with a READ lock for checking conflicts and then a WRITE lock for the append.
+	//  However, if there was ever a method that allowed for the ISBN to be changed, then we could have a race
+	//  condition, so I decided to instead make the whole thing a WRITE lock.
 
-	// start with a read lock
-	isWriting := false
-	b.mutex.RLock()
-
-	// unlock the mux on exit
-	defer func() {
-		if isWriting {
-			b.mutex.Unlock()
-		} else {
-			b.mutex.RUnlock()
-		}
-	}()
+	// write lock
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
 	// check for any conflicts
 	for _, existing := range *b.Store {
@@ -198,11 +189,6 @@ func (b *Books) InsertBook(book *loader.BookData) error {
 			return &InsertBookConflictError{fmt.Sprintf("InsertBook() ISBN13 conflict on %v", book.ISBN13)}
 		}
 	}
-
-	// switch to a write lock
-	b.mutex.RUnlock()
-	isWriting = true
-	b.mutex.Lock()
 
 	// add to the slice
 	*b.Store = append(*b.Store, book)
@@ -220,13 +206,11 @@ func (e *DeleteBookNotFoundError) Error() string {
 
 func (b *Books) DeleteBook(isbn string) (book *loader.BookData, err error) {
 
-	// NOTE: Originally I had a READ and WRITE separate lock process, like CreateBook(), however, there could be a
-	//  race condition whereby the index for delete was determined but then before the WRITE lock could be taken by
-	//  DeleteBook(), a WRITE lock could be taken by CreateBook() and the slice modified. This doesn't actually create
-	//  a problem for the code as CreateBook() is always adding to the end of the slice, but this could create a
-	//  problem if other methods that modify the slice were added in the future.
+	// NOTE: Originally I had started with a READ lock for finding the index position and then a WRITE lock for
+	//  the delete. However, if there was ever a method that allowed for other changes of the store, there could
+	//  be a race condition, so I decided to instead make the whole thing a WRITE lock.
 
-	// put the whole operation in a write lock
+	// write lock
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
