@@ -1,6 +1,12 @@
 package datastore
 
 import (
+	"encoding/csv"
+	"io"
+	"log"
+	"os"
+	"strconv"
+
 	"github.com/matt-FFFFFF/bookdata-api/loader"
 )
 
@@ -14,7 +20,38 @@ type Books struct {
 // At the beginning, this simply returns a pointer to the struct literal.
 // You need to change this to load data from the CSV file
 func (b *Books) Initialize() {
-	b.Store = &loader.BooksLiteral
+	//b.Store = &loader.BooksLiteral
+	books := []*loader.BookData{}
+
+	file, err := os.Open("assets/books.csv")
+	if err != nil {
+		log.Fatal("Unable to load books data file.")
+	}
+	defer file.Close()
+
+	r := csv.NewReader(file)
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		data := &loader.BookData{
+			BookID:  record[0],
+			Title:   record[1],
+			Authors: record[2],
+			ISBN:    record[4],
+			ISBN13:  record[5],
+		}
+		if avgRating, err := strconv.ParseFloat(record[3], 32); err != nil {
+			data.AverageRating = avgRating
+		}
+		books = append(books, data)
+	}
+	b.Store = &books
 }
 
 // GetAllBooks returns the entire dataset, subjet to the rudimentary limit & skip parameters
