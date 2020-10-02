@@ -86,3 +86,18 @@ func searchByTitle(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 	return
 }
+
+func searchByIsbn(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	pathParams := mux.Vars(r)
+	data := books.SearchByIsbn(pathParams["isbn"])
+	b, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "error marshalling data"}`))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+	return
+}

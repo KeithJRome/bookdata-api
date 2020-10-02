@@ -102,3 +102,15 @@ func (b *Books) SearchByTitle(title string) *[]*loader.BookData {
 	}
 	return &results
 }
+
+// SearchByIsbn returns the entire dataset, filtered by ISBN (case-insensitive, full matching)
+func (b *Books) SearchByIsbn(isbn string) *[]*loader.BookData {
+	isbn = strings.ToLower(isbn)
+	results := make([]*loader.BookData, 0)
+	for _, book := range *b.Store {
+		if isbn == strings.ToLower(book.ISBN) {
+			results = append(results, book)
+		}
+	}
+	return &results
+}
