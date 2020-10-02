@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/matt-FFFFFF/bookdata-api/loader"
 )
@@ -20,6 +21,11 @@ type Books struct {
 // At the beginning, this simply returns a pointer to the struct literal.
 // You need to change this to load data from the CSV file
 func (b *Books) Initialize() {
+	// record the duration of this operation
+	defer func(t time.Time) {
+		log.Printf("Initialize() completed in %v ms\n", time.Since(t).Milliseconds())
+	}(time.Now())
+
 	books := []*loader.BookData{}
 
 	file, err := os.Open("assets/books.csv")
