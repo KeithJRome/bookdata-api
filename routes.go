@@ -71,3 +71,18 @@ func searchByAuthor(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 	return
 }
+
+func searchByTitle(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	pathParams := mux.Vars(r)
+	data := books.SearchByTitle(pathParams["title"])
+	b, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "error marshalling data"}`))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+	return
+}

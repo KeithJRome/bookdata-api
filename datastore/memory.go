@@ -90,3 +90,15 @@ func (b *Books) SearchByAuthor(author string) *[]*loader.BookData {
 	}
 	return &results
 }
+
+// SearchByTitle returns the entire dataset, filtered by title (case-insensitive, partial matching)
+func (b *Books) SearchByTitle(title string) *[]*loader.BookData {
+	title = strings.ToLower(title)
+	results := make([]*loader.BookData, 0)
+	for _, book := range *b.Store {
+		if strings.Contains(strings.ToLower(book.Title), title) {
+			results = append(results, book)
+		}
+	}
+	return &results
+}
