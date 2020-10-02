@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/matt-FFFFFF/bookdata-api/loader"
@@ -69,11 +70,23 @@ func (b *Books) Initialize() {
 	b.Store = &books
 }
 
-// GetAllBooks returns the entire dataset, subjet to the rudimentary limit & skip parameters
+// GetAllBooks returns the entire dataset, subject to the rudimentary limit & skip parameters
 func (b *Books) GetAllBooks(limit, skip int) *[]*loader.BookData {
 	if limit == 0 || limit > len(*b.Store) {
 		limit = len(*b.Store)
 	}
 	ret := (*b.Store)[skip:limit]
 	return &ret
+}
+
+// SearchByAuthor returns the entire dataset, filtered by author (case-insensitive, partial matching)
+func (b *Books) SearchByAuthor(author string) *[]*loader.BookData {
+	author = strings.ToLower(author)
+	results := make([]*loader.BookData, 0)
+	for _, book := range *b.Store {
+		if strings.Contains(strings.ToLower(book.Authors), author) {
+			results = append(results, book)
+		}
+	}
+	return &results
 }

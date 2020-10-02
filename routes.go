@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 func getAllBooks(w http.ResponseWriter, r *http.Request) {
@@ -53,4 +55,19 @@ func getSkipParam(r *http.Request) (int, error) {
 		skip = val
 	}
 	return skip, nil
+}
+
+func searchByAuthor(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	pathParams := mux.Vars(r)
+	data := books.SearchByAuthor(pathParams["author"])
+	b, err := json.Marshal(data)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "error marshalling data"}`))
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(b)
+	return
 }

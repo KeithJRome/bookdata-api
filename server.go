@@ -26,5 +26,6 @@ func main() {
 		fmt.Fprintln(w, "api v1")
 	})
 	api.HandleFunc("/books", getAllBooks).Methods(http.MethodGet)
+	api.HandleFunc("/books/authors/{author}", searchByAuthor).Methods(http.MethodGet)
 	log.Fatalln(http.ListenAndServe(":8080", r))
 }
