@@ -20,7 +20,6 @@ type Books struct {
 // At the beginning, this simply returns a pointer to the struct literal.
 // You need to change this to load data from the CSV file
 func (b *Books) Initialize() {
-	//b.Store = &loader.BooksLiteral
 	books := []*loader.BookData{}
 
 	file, err := os.Open("assets/books.csv")
@@ -40,14 +39,24 @@ func (b *Books) Initialize() {
 		}
 
 		data := &loader.BookData{
-			BookID:  record[0],
-			Title:   record[1],
-			Authors: record[2],
-			ISBN:    record[4],
-			ISBN13:  record[5],
+			BookID:       record[0],
+			Title:        record[1],
+			Authors:      record[2],
+			ISBN:         record[4],
+			ISBN13:       record[5],
+			LanguageCode: record[6],
 		}
-		if avgRating, err := strconv.ParseFloat(record[3], 32); err != nil {
+		if avgRating, err := strconv.ParseFloat(record[3], 32); err == nil {
 			data.AverageRating = avgRating
+		}
+		if numPages, err := strconv.ParseInt(record[7], 10, 32); err == nil {
+			data.NumPages = int(numPages)
+		}
+		if ratings, err := strconv.ParseInt(record[8], 10, 32); err == nil {
+			data.Ratings = int(ratings)
+		}
+		if reviews, err := strconv.ParseInt(record[9], 10, 32); err == nil {
+			data.Reviews = int(reviews)
 		}
 		books = append(books, data)
 	}
