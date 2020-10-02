@@ -19,10 +19,11 @@ func getLimitParam(r *http.Request) (limit int, err error) {
 		var val int
 		val, err = strconv.Atoi(l)
 		if err != nil {
+			err = fmt.Errorf("limit must be an integer - %w", err)
 			return
 		}
 		if val < 0 {
-			err = errors.New(("limit is less than 0"))
+			err = errors.New(("limit must be >= 0"))
 			return
 		}
 		limit = val
@@ -37,10 +38,10 @@ func getSkipParam(r *http.Request) (skip int, err error) {
 		var val int
 		val, err = strconv.Atoi(l)
 		if err != nil {
-			return
+			err = fmt.Errorf("skip must be an integer - %w", err)
 		}
 		if val < 0 {
-			err = errors.New("skip is less than 0")
+			err = errors.New("skip must be >= 0")
 			return
 		}
 		skip = val
@@ -55,7 +56,8 @@ func returnBooks(w http.ResponseWriter, r *http.Request, getter func(limit, skip
 	limit, err := getLimitParam(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error": "invalid datatype for parameter limit"}`))
+		resp := fmt.Sprintf(`{"error": %v}`, err)
+		w.Write([]byte(resp))
 		return
 	}
 
@@ -63,7 +65,8 @@ func returnBooks(w http.ResponseWriter, r *http.Request, getter func(limit, skip
 	skip, err := getSkipParam(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(`{"error": "invalid datatype for parameter skip"}`))
+		resp := fmt.Sprintf(`{"error": %v}`, err)
+		w.Write([]byte(resp))
 		return
 	}
 
