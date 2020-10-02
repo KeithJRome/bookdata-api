@@ -11,4 +11,5 @@ type BookStore interface {
 	SearchByAuthor(author string) *[]*loader.BookData
 	SearchByTitle(title string) *[]*loader.BookData
 	SearchByIsbn(isbn string) *[]*loader.BookData
+	DeleteByIsbn(isbn string) bool
 }

@@ -114,3 +114,19 @@ func (b *Books) SearchByIsbn(isbn string) *[]*loader.BookData {
 	}
 	return &results
 }
+
+// DeleteByIsbn deletes a book by ISBN (case-insensitive, full matching)
+func (b *Books) DeleteByIsbn(isbn string) bool {
+	isbn = strings.ToLower(isbn)
+	for ix, book := range *b.Store {
+		if isbn == strings.ToLower(book.ISBN) {
+			newStore := (*b.Store)[0:ix]
+			for _, bk := range (*b.Store)[ix+1 : len(*b.Store)-1] {
+				newStore = append(newStore, bk)
+			}
+			b.Store = &newStore
+			return true
+		}
+	}
+	return false
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -17,6 +18,7 @@ func getAllBooks(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`{"error": "invalid datatype for parameter"}`))
 		return
 	}
+	log.Printf("getAllBooks limit=%v, skip=%v\n", limit, skip)
 	data := books.GetAllBooks(limit, skip)
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -60,7 +62,9 @@ func getSkipParam(r *http.Request) (int, error) {
 func searchByAuthor(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathParams := mux.Vars(r)
-	data := books.SearchByAuthor(pathParams["author"])
+	author := pathParams["author"]
+	log.Printf("searchByAuthor author=%v\n", author)
+	data := books.SearchByAuthor(author)
 	b, err := json.Marshal(data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -75,7 +79,9 @@ func searchByAuthor(w http.ResponseWriter, r *http.Request) {
 func searchByTitle(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathParams := mux.Vars(r)
-	data := books.SearchByTitle(pathParams["title"])
+	title := pathParams["title"]
+	log.Printf("searchByTitle title=%v\n", title)
+	data := books.SearchByTitle(title)
 	b, err := json.Marshal(data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -90,7 +96,9 @@ func searchByTitle(w http.ResponseWriter, r *http.Request) {
 func searchByIsbn(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	pathParams := mux.Vars(r)
-	data := books.SearchByIsbn(pathParams["isbn"])
+	isbn := pathParams["isbn"]
+	log.Printf("searchByIsbn isbn=%v\n", isbn)
+	data := books.SearchByIsbn(isbn)
 	b, err := json.Marshal(data)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -99,5 +107,18 @@ func searchByIsbn(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(b)
+	return
+}
+
+func deleteByIsbn(w http.ResponseWriter, r *http.Request) {
+	pathParams := mux.Vars(r)
+	isbn := pathParams["isbn"]
+	log.Printf("deleteByIsbn isbn=%v\n", isbn)
+	deleted := books.DeleteByIsbn(isbn)
+	if deleted != true {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 	return
 }

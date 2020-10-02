@@ -29,5 +29,6 @@ func main() {
 	api.HandleFunc("/books/authors/{author}", searchByAuthor).Methods(http.MethodGet)
 	api.HandleFunc("/books/title/{title}", searchByTitle).Methods(http.MethodGet)
 	api.HandleFunc("/books/isbn/{isbn}", searchByIsbn).Methods(http.MethodGet)
+	api.HandleFunc("/books/isbn/{isbn}", deleteByIsbn).Methods(http.MethodDelete)
 	log.Fatalln(http.ListenAndServe(":8080", r))
 }
